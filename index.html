@@ -8,13 +8,14 @@
     <meta name="description" content="Mantis — a shared debugging environment for humans and AI agents." />
     <title>Mantis — Agent-native debugging</title>
     <!--
-      WebMCP is behind an origin trial in Chrome 149. Register the deployed
-      origin at https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241
-      and paste the token below to turn tool registration on in production.
-      Without it the app runs on its own model-context shim and the status
-      chip reads "WebMCP preview".
+      WebMCP origin trial token for https://mantis-lilac.vercel.app
+      Feature: WebMCP · Chrome 149-156 · expires 2026-11-17
+      Registered at https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241
+      A token is origin-bound and public by design; it is not a secret.
+      On any browser without the trial, Mantis falls back to its own
+      model-context shim and the status chip reads "WebMCP preview".
     -->
-    <!-- <meta http-equiv="origin-trial" content="REPLACE_WITH_ORIGIN_TRIAL_TOKEN" /> -->
+    <meta http-equiv="origin-trial" content="AssptTGmV5LjFGq8q9/dt201UrDsK7dG/0zeHKCN6tIJOPlXihclhhTwNzwdrbh0m3DG/9ElT6HReuHcbT6dvwsAAABXeyJvcmlnaW4iOiJodHRwczovL21hbnRpcy1saWxhYy52ZXJjZWwuYXBwOjQ0MyIsImZlYXR1cmUiOiJXZWJNQ1AiLCJleHBpcnkiOjE3OTQ4NzM2MDB9" />
 
     <script>
       // Resolve the theme before first paint so the shell never flashes the wrong one.
