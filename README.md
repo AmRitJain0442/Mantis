@@ -4,6 +4,8 @@
 
 FlowTrace turns disconnected browser telemetry into one causal graph. Developers get a visual timeline; AI agents get structured, read-only WebMCP tools over the exact same trace.
 
+![FlowTrace in dark and light](preview-dark.png)
+
 When an agent calls `explain_failure`, FlowTrace returns machine-readable causes and simultaneously focuses those events in the UI:
 
 ```text
@@ -19,6 +21,8 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 - Built-in checkout-failure demo with replay, source filters, event inspection, and agent explanation
 - Read-only tool annotations and strict JSON Schemas
 - Browser-safe preview API for environments where experimental WebMCP is unavailable
+- Light and dark themes that follow the OS until you pick one, then remember the choice
+- A signal spine that places every event at its true temporal offset, so the stall that caused the failure is visible rather than described
 - Responsive, keyboard-focusable developer interface
 
 ## WebMCP tools
