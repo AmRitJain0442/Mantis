@@ -48,6 +48,7 @@ function TraceNode({ event, active, muted, onClick }: { event: TraceEvent; activ
 
 function TraceGraph({ highlighted, selected, onSelect }: { highlighted: string[]; selected: string; onSelect: (id: string) => void }) {
   const hasFocus = highlighted.length > 0;
+  const [zoom, setZoom] = useState(100);
   return (
     <div className="graph-wrap">
       <div className="graph-toolbar">
@@ -55,9 +56,13 @@ function TraceGraph({ highlighted, selected, onSelect }: { highlighted: string[]
           <span><i className="legend-line solid" />caused</span>
           <span><i className="legend-line dash" />correlated</span>
         </div>
-        <div className="zoom-control"><button>−</button><span>86%</span><button>+</button></div>
+        <div className="zoom-control">
+          <button aria-label="Zoom out" disabled={zoom === 80} onClick={() => setZoom((value) => Math.max(80, value - 10))}>−</button>
+          <span>{zoom}%</span>
+          <button aria-label="Zoom in" disabled={zoom === 140} onClick={() => setZoom((value) => Math.min(140, value + 10))}>+</button>
+        </div>
       </div>
-      <svg className="trace-svg" viewBox="0 0 1050 560" role="img" aria-label="Checkout failure causal graph">
+      <svg className="trace-svg" style={{ width: `${zoom}%` }} viewBox="0 0 1050 560" role="img" aria-label="Checkout failure causal graph">
         <defs>
           <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
             <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#24282d" strokeWidth="0.7" opacity=".5" />

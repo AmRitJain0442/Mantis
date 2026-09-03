@@ -6,7 +6,7 @@ dist/
 *.log
 *.tsbuildinfo
 .tmp-*/
-flowtrace-preview.png
+*-preview.png
 playwright-report/
 test-results/
 .DS_Store
