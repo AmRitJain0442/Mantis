@@ -10,9 +10,10 @@ test("renders the complete checkout failure trace", async ({ page }) => {
   await expect(page.getByText("POST /api/checkout", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("TypeError", { exact: true }).first()).toBeVisible();
 
-  await expect(page.getByText("100%", { exact: true })).toBeVisible();
+  const zoom = page.locator(".zoom-level");
+  const before = Number((await zoom.innerText()).replace("%", ""));
   await page.getByRole("button", { name: "Zoom in" }).click();
-  await expect(page.getByText("110%", { exact: true })).toBeVisible();
+  await expect(zoom).toHaveText(`${before + 10}%`);
 });
 
 test("agent explanation and graph focus stay synchronized", async ({ page }) => {

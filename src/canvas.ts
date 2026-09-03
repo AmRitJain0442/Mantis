@@ -5,7 +5,9 @@ export type Viewport = { x: number; y: number; k: number };
 
 const MIN_K = 0.4;
 const MAX_K = 2;
-const FIT_MARGIN = 48;
+/** The title sits over the top of the canvas and the decks over the bottom, so
+ *  centring has to happen inside what is actually left. */
+const INSET = { top: 78, bottom: 62, side: 28 };
 /** Below this much pointer travel a drag is really a click. */
 const CLICK_SLOP = 4;
 
@@ -55,32 +57,35 @@ export function useCanvas() {
     });
   }, []);
 
-  const fit = useCallback(() => {
+/** Centre `bounds` in the frame's usable area at scale `k`. */
+  const centre = (frame: Rect, bounds: Rect, k: number): Viewport => ({
+    k,
+    x: INSET.side + (frame.w - INSET.side * 2 - bounds.w * k) / 2 - bounds.x * k,
+    y: INSET.top + (frame.h - INSET.top - INSET.bottom - bounds.h * k) / 2 - bounds.y * k
+  });
+
+/** Scale the trace to the usable frame, never past 1:1 — a six-node graph
+ *  blown up to 200% would look broken, not helpful. */
+  const fitTo = useCallback((layout: Positions) => {
     const frame = frameSize();
     if (!frame) return;
-    const bounds = worldBounds(positions);
-    const k = clampZoom(round(Math.min(
-      (frame.w - FIT_MARGIN * 2) / bounds.w,
-      (frame.h - FIT_MARGIN * 2) / bounds.h
-    )));
-    setViewport({
-      k,
-      x: (frame.w - bounds.w * k) / 2 - bounds.x * k,
-      y: (frame.h - bounds.h * k) / 2 - bounds.y * k
-    });
-  }, [positions]);
+    const bounds = worldBounds(layout);
+    const k = clampZoom(Math.min(1, round(Math.min(
+      (frame.w - INSET.side * 2) / bounds.w,
+      (frame.h - INSET.top - INSET.bottom) / bounds.h
+    ))));
+    setViewport(centre(frame, bounds, k));
+  }, []);
+
+  const fit = useCallback(() => fitTo(positions), [fitTo, positions]);
 
   const reset = useCallback(() => {
     setPositions({ ...initialPositions });
-    const frame = frameSize();
-    const bounds = worldBounds(initialPositions);
-    setViewport(frame
-      ? { k: 1, x: (frame.w - bounds.w) / 2 - bounds.x, y: (frame.h - bounds.h) / 2 - bounds.y }
-      : { k: 1, x: 0, y: 0 });
-  }, []);
+    fitTo(initialPositions);
+  }, [fitTo]);
 
-  // Centre the trace once the frame has been measured.
-  useEffect(() => { reset(); }, [reset]);
+  // Frame the trace once, after the frame has been measured.
+  useEffect(() => { fitTo(initialPositions); }, [fitTo]);
 
   /** Trackpad and wheel: ctrl/⌘ zooms, everything else pans. */
   const onWheel = useCallback((event: React.WheelEvent) => {

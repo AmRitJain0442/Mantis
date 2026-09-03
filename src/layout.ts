@@ -33,12 +33,12 @@ export const boundaryOf = (nodeId: string): BoundaryId =>
   boundaries.find((boundary) => boundary.nodes.includes(nodeId))!.id;
 
 export const initialPositions: Positions = {
-  evt_001: { x: 44, y: 130 },
-  call_checkout_01: { x: 292, y: 130 },
-  req_checkout_42: { x: 544, y: 76 },
-  state_payment_07: { x: 752, y: 76 },
-  render_checkout_12: { x: 752, y: 200 },
-  error_type_01: { x: 752, y: 388 }
+  evt_001: { x: 40, y: 60 },
+  call_checkout_01: { x: 300, y: 60 },
+  req_checkout_42: { x: 560, y: 60 },
+  state_payment_07: { x: 560, y: 300 },
+  render_checkout_12: { x: 560, y: 440 },
+  error_type_01: { x: 200, y: 660 }
 };
 
 /** `h` hops leave the right edge and enter the left; `v` hops top-to-bottom. */
@@ -47,7 +47,7 @@ export type Edge = { from: string; to: string; axis: "h" | "v"; hop: string };
 export const edges: Edge[] = [
   { from: "evt_001", to: "call_checkout_01", axis: "h", hop: "4ms" },
   { from: "call_checkout_01", to: "req_checkout_42", axis: "h", hop: "28ms" },
-  { from: "req_checkout_42", to: "state_payment_07", axis: "h", hop: "1.19s" },
+  { from: "req_checkout_42", to: "state_payment_07", axis: "v", hop: "1.19s" },
   { from: "state_payment_07", to: "render_checkout_12", axis: "v", hop: "5ms" },
   { from: "render_checkout_12", to: "error_type_01", axis: "v", hop: "8ms" }
 ];
