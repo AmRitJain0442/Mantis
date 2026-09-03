@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
  *  which frames the trace rather than resizing the tool around it. */
 export const SCALE_STEPS = [0.8, 0.9, 1, 1.1, 1.25, 1.5] as const;
 
-const STORAGE_KEY = "flowtrace:scale";
+const STORAGE_KEY = "mantis:scale";
 const DEFAULT_SCALE = 1;
 
 export const readScale = (): number => {

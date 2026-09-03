@@ -58,7 +58,7 @@ declare global {
     };
   }
   interface Window {
-    flowTrace?: ModelContextLike & {
+    mantis?: ModelContextLike & {
       tools: ToolDefinition[];
       invoke: (name: string, input?: Record<string, unknown>) => Promise<ToolResult>;
     };
@@ -110,12 +110,12 @@ const result = (summary: string, structuredContent?: unknown): ToolResult => ({
 });
 
 const focus = (ids: string[], source: string, summary: string) => {
-  window.dispatchEvent(new CustomEvent("flowtrace:focus", { detail: { ids, source, summary } }));
+  window.dispatchEvent(new CustomEvent("mantis:focus", { detail: { ids, source, summary } }));
 };
 
 /** Commands from write tools — the UI listens and applies them. */
 const command = (detail: Record<string, unknown>) => {
-  window.dispatchEvent(new CustomEvent("flowtrace:command", { detail }));
+  window.dispatchEvent(new CustomEvent("mantis:command", { detail }));
 };
 
 const getEvent = (id: unknown) => events.find((event) => event.id === id);
@@ -166,7 +166,7 @@ const listEvents = (list: TraceEvent[]) =>
 const readTools: ToolDefinition[] = [
   {
     name: "list_sessions", title: "List trace sessions",
-    description: "List available FlowTrace debugging sessions with status and error counts. Use this to find the session to investigate.",
+    description: "List available Mantis debugging sessions with status and error counts. Use this to find the session to investigate.",
     inputSchema: objectSchema(), annotations: { readOnlyHint: true },
     execute: async () => result(
       sessions.map((s) => `${s.id} — ${s.label}, ${s.status}, ${s.errorCount} error(s), ${s.duration}`).join("\n"),
@@ -175,7 +175,7 @@ const readTools: ToolDefinition[] = [
   },
   {
     name: "inspect_session", title: "Inspect a trace session",
-    description: "Return the ordered application events in a debugging session and focus that session in the FlowTrace UI.",
+    description: "Return the ordered application events in a debugging session and focus that session in the Mantis UI.",
     inputSchema: objectSchema({ sessionId: { type: "string", description: clamp("Session ID returned by list_sessions", MAX_PARAM_DESCRIPTION) } }, ["sessionId"]),
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: async ({ sessionId }) => {
@@ -293,7 +293,7 @@ const readTools: ToolDefinition[] = [
 const writeTools: ToolDefinition[] = [
   {
     name: "select_event", title: "Select a trace event",
-    description: "Open a trace event in the FlowTrace inspector so the developer is looking at the same event as the agent.",
+    description: "Open a trace event in the Mantis inspector so the developer is looking at the same event as the agent.",
     inputSchema: objectSchema({ eventId: { type: "string", description: clamp("Event ID to open in the inspector", MAX_PARAM_DESCRIPTION) } }, ["eventId"]),
     annotations: { readOnlyHint: false },
     execute: async ({ eventId }) => {
@@ -304,7 +304,7 @@ const writeTools: ToolDefinition[] = [
   },
   {
     name: "set_source_filter", title: "Filter the capture sources",
-    description: "Set or clear the capture-source filter in the FlowTrace sidebar. Pass 'all' to clear the filter.",
+    description: "Set or clear the capture-source filter in the Mantis sidebar. Pass 'all' to clear the filter.",
     inputSchema: objectSchema({
       type: { type: "string", enum: ["all", "network", "console", "webmcp", "state", "render", "user"], description: clamp("Source to isolate, or 'all' to clear", MAX_PARAM_DESCRIPTION) }
     }, ["type"]),
@@ -316,7 +316,7 @@ const writeTools: ToolDefinition[] = [
   },
   {
     name: "frame_trace", title: "Frame the trace on the canvas",
-    description: "Fit the whole causal graph into view on the FlowTrace canvas, or restore the authored node layout.",
+    description: "Fit the whole causal graph into view on the Mantis canvas, or restore the authored node layout.",
     inputSchema: objectSchema({
       mode: { type: "string", enum: ["fit", "reset"], description: clamp("'fit' scales to view; 'reset' restores the layout", MAX_PARAM_DESCRIPTION) }
     }, ["mode"]),
@@ -328,7 +328,7 @@ const writeTools: ToolDefinition[] = [
   },
   {
     name: "replay_session", title: "Replay a trace session",
-    description: "Step the FlowTrace canvas through a session's events in order so the developer can watch the failure unfold.",
+    description: "Step the Mantis canvas through a session's events in order so the developer can watch the failure unfold.",
     inputSchema: objectSchema({ sessionId: { type: "string" } }, ["sessionId"]),
     annotations: { readOnlyHint: false },
     execute: async ({ sessionId = "session_8291" }, options) => {
@@ -352,7 +352,7 @@ const descriptorOf = (tool: ToolDefinition): DiscoveredTool => ({
 
 const runLocal = async (name: string, input: Record<string, unknown> = {}, signal?: AbortSignal): Promise<ToolResult> => {
   const tool = tools.find((candidate) => candidate.name === name);
-  if (!tool) throw new Error(`Unknown FlowTrace tool: ${name}`);
+  if (!tool) throw new Error(`Unknown Mantis tool: ${name}`);
   try {
     return await tool.execute(input, { signal });
   } catch (error) {
@@ -362,7 +362,7 @@ const runLocal = async (name: string, input: Record<string, unknown> = {}, signa
 
 /** Same surface as `document.modelContext`, served locally so the UI keeps
  *  working in browsers without the origin trial. */
-const shim: Window["flowTrace"] = {
+const shim: Window["mantis"] = {
   tools,
   getTools: async () => tools.map(descriptorOf),
   executeTool: async (tool, input, options) =>
@@ -377,8 +377,8 @@ export type RegistrationState = {
   controller: AbortController;
 };
 
-export async function registerFlowTraceTools(): Promise<RegistrationState> {
-  window.flowTrace = shim;
+export async function registerMantisTools(): Promise<RegistrationState> {
+  window.mantis = shim;
   const controller = new AbortController();
 
   if (!document.modelContext?.registerTool) {

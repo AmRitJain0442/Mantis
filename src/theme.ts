@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "flowtrace:theme";
+const STORAGE_KEY = "mantis:theme";
 
 const systemTheme = (): Theme =>
   window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";

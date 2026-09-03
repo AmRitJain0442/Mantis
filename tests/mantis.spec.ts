@@ -1,9 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+
+/** Node positions live in world coordinates on the element itself, so reading
+ *  them sidesteps the canvas transform and the framing that happens on mount. */
+const worldPos = (node: Locator) =>
+  node.evaluate((el) => ({ left: parseFloat(el.style.left), top: parseFloat(el.style.top) }));
 
 test("renders the complete checkout failure trace", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page).toHaveTitle(/FlowTrace/);
+  await expect(page).toHaveTitle(/Mantis/);
   await expect(page.getByRole("heading", { name: "One failure. Every cause." })).toBeVisible();
   await expect(page.locator(".trace-node")).toHaveCount(6);
   await expect(page.getByText("checkout()", { exact: true }).first()).toBeVisible();
@@ -29,7 +34,7 @@ test("tools answer in the MCP envelope agents expect", async ({ page }) => {
   await page.goto("/");
 
   const result = await page.evaluate(async () =>
-    window.flowTrace?.invoke("explain_failure", { sessionId: "session_8291" }));
+    window.mantis?.invoke("explain_failure", { sessionId: "session_8291" }));
 
   // A readable summary for the model...
   expect(result?.content?.[0]).toMatchObject({ type: "text" });
@@ -61,22 +66,21 @@ test("the theme switch flips the workspace and survives a reload", async ({ page
 test("nodes can be dragged and the canvas can be reframed", async ({ page }) => {
   await page.goto("/");
   const node = page.locator(".trace-node").first();
-  // Nodes animate in; measure once they have settled.
-  await page.waitForTimeout(700);
-  const before = (await node.boundingBox())!;
+  const before = await worldPos(node);
 
-  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  const box = (await node.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(before.x + before.width / 2 - 60, before.y + before.height / 2 + 150, { steps: 10 });
+  await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2 + 150, { steps: 10 });
   await page.mouse.up();
 
-  const after = (await node.boundingBox())!;
-  expect(Math.abs(after.y - before.y)).toBeGreaterThan(80);
+  const dragged = await worldPos(node);
+  expect(dragged.top - before.top).toBeGreaterThan(80);
+  expect(dragged.left).toBeLessThan(before.left);
 
-  // Reset restores the authored layout.
+  // Reset restores the authored layout exactly.
   await page.getByRole("button", { name: "Reset layout" }).click();
-  const restored = (await node.boundingBox())!;
-  expect(Math.abs(restored.y - before.y)).toBeLessThan(4);
+  await expect.poll(() => worldPos(node)).toEqual(before);
 });
 
 test("the interface scale resizes the whole shell and persists", async ({ page }) => {

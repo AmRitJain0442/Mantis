@@ -156,8 +156,8 @@ function App() {
       setHighlighted(detail.ids);
       if (detail.ids.length) setSelected(detail.ids[0]);
     };
-    window.addEventListener("flowtrace:focus", handleFocus);
-    return () => window.removeEventListener("flowtrace:focus", handleFocus);
+    window.addEventListener("mantis:focus", handleFocus);
+    return () => window.removeEventListener("mantis:focus", handleFocus);
   }, []);
 
   // The minimap needs the viewport in world units, so it needs the frame size.
@@ -188,8 +188,8 @@ function App() {
       else if (detail.action === "frame") { if (detail.mode === "reset") canvas.reset(); else canvas.fit(); }
       else if (detail.action === "replay") void replay();
     };
-    window.addEventListener("flowtrace:command", onCommand);
-    return () => window.removeEventListener("flowtrace:command", onCommand);
+    window.addEventListener("mantis:command", onCommand);
+    return () => window.removeEventListener("mantis:command", onCommand);
   });
 
   const runTool = async (name: string, input: Record<string, unknown> = {}) => {
@@ -264,7 +264,7 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <span className="brand"><BrandMark />FLOWTRACE<em>α</em></span>
+        <span className="brand"><BrandMark />MANTIS<em>α</em></span>
         <span className="topbar-divider" />
         <span className="breadcrumb">session_8291<b>·</b><strong>Checkout · agent run</strong></span>
         <span className="run-chip"><i />Failed</span>
@@ -292,7 +292,7 @@ function App() {
             <form
               className="search-box"
               toolname="search_traces"
-              tooldescription="Search FlowTrace debugging sessions by name or session ID."
+              tooldescription="Search Mantis debugging sessions by name or session ID."
               onSubmit={(e) => e.preventDefault()}
             >
               <Search size={12} />
@@ -479,7 +479,7 @@ function App() {
             <div className="agent">
               <div className="agent-id">
                 <span className="agent-glyph"><Sparkles size={14} /></span>
-                <div><strong>FlowTrace Agent</strong><small>Reads the same trace you do</small></div>
+                <div><strong>Mantis Agent</strong><small>Reads the same trace you do</small></div>
               </div>
               <div className="thread">
                 <div className="ask">Why did checkout fail?</div>
@@ -523,7 +523,7 @@ function App() {
                   <button onClick={() => void runTool("find_errors", { sessionId: "session_8291" })}>Find errors</button>
                 </div>
                 <div className="composer-box">
-                  <textarea defaultValue="Why did checkout fail?" aria-label="Ask FlowTrace Agent" />
+                  <textarea defaultValue="Why did checkout fail?" aria-label="Ask Mantis Agent" />
                   <button aria-label="Send message"><Send size={13} /></button>
                 </div>
                 <small>
@@ -562,7 +562,7 @@ function App() {
         <span><i className="dot ok" />Live capture</span>
         <span><Globe2 size={11} />localhost:3000</span>
         <span><Activity size={11} />{events.length} events</span>
-        <b>FlowTrace SDK v0.1.0</b>
+        <b>Mantis SDK v0.1.0</b>
       </footer>
     </div>
   );

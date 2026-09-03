@@ -14,14 +14,23 @@ type Envelope = {
   isError?: boolean;
 };
 
-const discover = (page: Page) => page.evaluate(async () => window.flowTrace!.getTools());
+/** Registration happens once the app mounts, so wait for the model context to
+ *  exist rather than assuming it is there the moment the document loads. */
+const ready = (page: Page) => page.waitForFunction(() => Boolean(window.mantis));
 
-const run = (page: Page, name: string, input: Record<string, unknown> = {}) =>
-  page.evaluate(
+const discover = async (page: Page) => {
+  await ready(page);
+  return page.evaluate(async () => window.mantis!.getTools());
+};
+
+const run = async (page: Page, name: string, input: Record<string, unknown> = {}) => {
+  await ready(page);
+  return page.evaluate(
     async ([toolName, args]) =>
-      window.flowTrace!.invoke(toolName as string, args as Record<string, unknown>) as Promise<Envelope>,
+      window.mantis!.invoke(toolName as string, args as Record<string, unknown>) as Promise<Envelope>,
     [name, input] as const
   );
+};
 
 /** Every tool, with arguments an agent could plausibly derive from discovery. */
 const CASES: { name: string; input: Record<string, unknown>; expect: string }[] = [
@@ -109,7 +118,7 @@ test.describe("WebMCP tool evals", () => {
     const form = page.locator("form.search-box");
 
     await expect(form).toHaveAttribute("toolname", "search_traces");
-    await expect(form).toHaveAttribute("tooldescription", /Search FlowTrace/);
+    await expect(form).toHaveAttribute("tooldescription", /Search Mantis/);
     await expect(form.locator("[toolparamdescription]")).toHaveCount(1);
   });
 

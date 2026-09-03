@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0d12" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="FlowTrace — a shared debugging environment for humans and AI agents." />
-    <title>FlowTrace — Agent-native debugging</title>
+    <meta name="description" content="Mantis — a shared debugging environment for humans and AI agents." />
+    <title>Mantis — Agent-native debugging</title>
     <!--
       WebMCP is behind an origin trial in Chrome 149. Register the deployed
       origin at https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241
@@ -20,7 +20,7 @@
       // Resolve the theme before first paint so the shell never flashes the wrong one.
       (function () {
         var stored = null;
-        try { stored = localStorage.getItem("flowtrace:theme"); } catch (e) {}
+        try { stored = localStorage.getItem("mantis:theme"); } catch (e) {}
         var theme = stored === "light" || stored === "dark"
           ? stored
           : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
@@ -28,7 +28,7 @@
         document.documentElement.style.colorScheme = theme;
 
         var scale = null;
-        try { scale = localStorage.getItem("flowtrace:scale"); } catch (e) {}
+        try { scale = localStorage.getItem("mantis:scale"); } catch (e) {}
         if (scale && scale !== "1") document.documentElement.style.zoom = scale;
       })();
     </script>

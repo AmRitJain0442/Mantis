@@ -1,12 +1,12 @@
-# FlowTrace
+# Mantis
 
 ### A shared debugging environment for humans and agents
 
-FlowTrace turns disconnected browser telemetry into one causal graph. Developers get a visual timeline; AI agents get structured, read-only WebMCP tools over the exact same trace.
+Mantis turns disconnected browser telemetry into one causal graph. Developers get a visual timeline; AI agents get structured, read-only WebMCP tools over the exact same trace.
 
-![The FlowTrace canvas](preview-dark.png)
+![The Mantis canvas](preview-dark.png)
 
-When an agent calls `explain_failure`, FlowTrace returns machine-readable causes and simultaneously focuses those events in the UI:
+When an agent calls `explain_failure`, Mantis returns machine-readable causes and simultaneously focuses those events in the UI:
 
 ```text
 WebMCP checkout() → POST /api/checkout → HTTP 500
@@ -16,7 +16,7 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 ## What is working
 
 - Interactive causal graph spanning agent intent, WebMCP, network, state, render, and console events
-- Synchronized agent/UI focus through stable event IDs and `flowtrace:focus` browser events
+- Synchronized agent/UI focus through stable event IDs and `mantis:focus` browser events
 - Eight real WebMCP tools registered with `document.modelContext.registerTool`
 - Built-in checkout-failure demo with replay, source filters, event inspection, and agent explanation
 - Read-only tool annotations and strict JSON Schemas
@@ -53,7 +53,7 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 
 Every tool whose result is built from captured console or network payloads also
 carries `untrustedContentHint` — that data is authored by the page under test,
-not by FlowTrace, and downstream consumers should treat it accordingly.
+not by Mantis, and downstream consumers should treat it accordingly.
 
 A declarative tool is registered too: the trace search box carries `toolname`,
 `tooldescription` and `toolparamdescription`, so the browser can drive the form
@@ -92,7 +92,7 @@ await modelContext().executeTool(tool, { sessionId: "session_8291" });
 Tool execution emits a shared focus event:
 
 ```ts
-window.dispatchEvent(new CustomEvent("flowtrace:focus", {
+window.dispatchEvent(new CustomEvent("mantis:focus", {
   detail: {
     ids: ["req_checkout_42", "state_payment_07", "error_type_01"],
     source: "explain_failure"
@@ -108,7 +108,7 @@ and paste the token into the commented `<meta http-equiv="origin-trial">` tag in
 [`index.html`](index.html). The status chip then reads **WebMCP live** with the
 registered tool count.
 
-Without a token, FlowTrace serves the identical surface — `getTools`,
+Without a token, Mantis serves the identical surface — `getTools`,
 `executeTool`, annotations and all — through its own model-context shim, and the
 chip reads **WebMCP preview**. The application behaves the same either way; only
 the registration target changes.
@@ -152,18 +152,18 @@ npm run preview
 1. Open the failed `Checkout · agent run` session.
 2. Select events in the graph to inspect their structured metadata.
 3. Choose **Ask agent to explain** or **Run investigation**.
-4. FlowTrace invokes `explain_failure({ sessionId: "session_8291" })`.
+4. Mantis invokes `explain_failure({ sessionId: "session_8291" })`.
 5. Watch the agent response and causal graph focus on the same events.
 
 In a browser without WebMCP support, the same tools are available from DevTools for development:
 
 ```js
-await window.flowTrace.invoke("explain_failure", {
+await window.mantis.invoke("explain_failure", {
   sessionId: "session_8291"
 });
 ```
 
-For native testing, use ChatGPT's in-app browser or enable WebMCP testing in Chrome at `chrome://flags/#enable-webmcp-testing`, then ask the browser agent to list and inspect FlowTrace sessions.
+For native testing, use ChatGPT's in-app browser or enable WebMCP testing in Chrome at `chrome://flags/#enable-webmcp-testing`, then ask the browser agent to list and inspect Mantis sessions.
 
 ## Architecture
 
@@ -174,7 +174,7 @@ Normalized TraceEvent graph
         ├──→ React visual debugger (human view)
         └──→ document.modelContext tools (agent view)
                        ↓
-                flowtrace:focus
+                mantis:focus
                        ↓
              synchronized selection
 ```

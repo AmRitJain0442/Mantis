@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  modelContext, registerFlowTraceTools,
+  modelContext, registerMantisTools,
   type DiscoveredTool, type ToolResult
 } from "./webmcp";
 
 export type Connection = "connecting" | "native" | "preview";
 
-/** Registers FlowTrace's tools, then keeps a live view of what is actually
+/** Registers Mantis's tools, then keeps a live view of what is actually
  *  registered by re-reading `getTools()` whenever the browser fires
  *  `toolchange`. Aborting the registration controller on teardown unregisters
  *  every tool this page added. */
@@ -28,7 +28,7 @@ export function useWebMCP() {
     let live = true;
     let detach: (() => void) | undefined;
 
-    registerFlowTraceTools().then((state) => {
+    registerMantisTools().then((state) => {
       if (!live) {
         state.controller.abort();
         return;
