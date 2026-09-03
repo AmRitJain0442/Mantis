@@ -4,7 +4,7 @@
 
 ### A shared debugging environment for humans and agents
 
-**[▶ Live demo](https://flowtrace-mu.vercel.app)** · [WebMCP tools](#the-webmcp-surface) · [How the integration works](#how-the-integration-works) · [Evals](#evals)
+**[▶ Live demo](https://mantis-lilac.vercel.app)** · [WebMCP tools](#the-webmcp-surface) · [How the integration works](#how-the-integration-works) · [Evals](#evals)
 
 [![WebMCP](https://img.shields.io/badge/WebMCP-12_tools-0a8d7d)](#the-webmcp-surface)
 [![Tests](https://img.shields.io/badge/tests-24_passing-3a54c9)](#evals)
