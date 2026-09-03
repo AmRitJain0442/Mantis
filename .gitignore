@@ -5,5 +5,9 @@ dist/
 *.local
 *.log
 *.tsbuildinfo
+.tmp-*/
+flowtrace-preview.png
+playwright-report/
+test-results/
 .DS_Store
 Thumbs.db
