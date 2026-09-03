@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   Activity, Bot, Braces, Check, CircleDot, Code2, Crosshair, Filter, Globe2,
-  Layers3, Maximize2, MessageSquareText, Moon, Network, PanelRightClose, Play,
-  RotateCcw, Search, Send, Sparkles, Sun, Terminal
+  Layers3, Lock, Maximize2, MessageSquareText, Moon, Network, PanelRightClose,
+  Play, RotateCcw, Search, Send, ShieldAlert, Sparkles, Sun, Terminal, Wrench
 } from "lucide-react";
-import { events, kindLabel, sessions, toolNames, type EventKind, type TraceEvent } from "./data";
-import { registerFlowTraceTools } from "./webmcp";
+import { events, kindLabel, sessions, type EventKind, type TraceEvent } from "./data";
+import { toolNames, type DiscoveredTool } from "./webmcp";
+import { useWebMCP } from "./useWebMCP";
 import { useTheme } from "./theme";
 import { useWorkspaceScale } from "./scale";
 import { useCanvas } from "./canvas";
@@ -24,6 +25,18 @@ const tone = (boundary: BoundaryId): CSSProperties =>
   ({ "--tone": `var(--t-${boundary})` }) as CSSProperties;
 
 const getEvent = (id: string) => events.find((event) => event.id === id)!;
+
+/** Arguments the Tools panel uses when running a tool against this session. */
+const defaultInputFor = (name: string): Record<string, unknown> => {
+  if (name === "trace_request") return { requestId: "req_checkout_42" };
+  if (name === "inspect_webmcp_call") return { callId: "call_checkout_01" };
+  if (name === "get_causal_chain" || name === "select_event") return { eventId: "req_checkout_42" };
+  if (name === "filter_events") return { type: "network", sessionId: "session_8291" };
+  if (name === "set_source_filter") return { type: "all" };
+  if (name === "frame_trace") return { mode: "fit" };
+  if (name === "list_sessions") return {};
+  return { sessionId: "session_8291" };
+};
 
 /** Rect carries w/h; SVG attributes want width/height. */
 const svgRect = (rect: Rect) => ({ x: rect.x, y: rect.y, width: rect.w, height: rect.h });
@@ -78,26 +91,66 @@ function Minimap({ positions, viewport, frame }: {
   );
 }
 
+/** What the browser actually has registered, with the guarantees each tool
+ *  declares. Reads live through `getTools()`, so it reflects the browser's
+ *  registry rather than this module's intentions. */
+function ToolRegistry({ tools, connection, onRun, busy }: {
+  tools: DiscoveredTool[];
+  connection: string;
+  onRun: (name: string) => void;
+  busy: string | null;
+}) {
+  return (
+    <div className="registry">
+      <p className="registry-note">
+        {connection === "native"
+          ? `${tools.length} tools registered with this browser through document.modelContext.`
+          : `${tools.length} tools served through the local model-context shim. Enable the Chrome origin trial to register them with the browser.`}
+      </p>
+      {tools.map((tool) => (
+        <div key={tool.name} className="tool-card">
+          <div className="tool-card-head">
+            <strong>{tool.name}</strong>
+            <button className="quiet-button" disabled={busy === tool.name} onClick={() => onRun(tool.name)}>
+              {busy === tool.name ? "Running" : "Run"}
+            </button>
+          </div>
+          <p>{tool.description}</p>
+          <div className="tool-hints">
+            <span className={tool.annotations?.readOnlyHint ? "hint read" : "hint write"}>
+              {tool.annotations?.readOnlyHint ? <><Lock size={9} />read-only</> : <><Wrench size={9} />writes UI state</>}
+            </span>
+            {tool.annotations?.untrustedContentHint && (
+              <span className="hint untrusted"><ShieldAlert size={9} />untrusted content</span>
+            )}
+            {tool.origin && <span className="hint origin">{tool.origin.replace(/^https?:\/\//, "")}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type AgentState = "idle" | "thinking" | "done";
 
 function App() {
   const [selected, setSelected] = useState("req_checkout_42");
   const [highlighted, setHighlighted] = useState<string[]>([]);
   const [agentState, setAgentState] = useState<AgentState>("idle");
-  const [webmcp, setWebmcp] = useState<"checking" | "native" | "preview">("checking");
   const [eventFilter, setEventFilter] = useState<EventKind | "all">("all");
-  const [panel, setPanel] = useState<"agent" | "event">("agent");
+  const [panel, setPanel] = useState<"agent" | "event" | "tools">("agent");
+  const [busyTool, setBusyTool] = useState<string | null>(null);
   const [surge, setSurge] = useState(false);
   const [frame, setFrame] = useState({ w: 1000, h: 620 });
 
   const canvas = useCanvas();
   const { theme, toggleTheme } = useTheme();
   const ui = useWorkspaceScale();
+  const mcp = useWebMCP();
   const selectedEvent = useMemo(() => getEvent(selected), [selected]);
   const focused = highlighted.length > 0;
 
   useEffect(() => {
-    registerFlowTraceTools().then((result) => setWebmcp(result.supported ? "native" : "preview"));
     const handleFocus = (raw: Event) => {
       const detail = (raw as CustomEvent<{ ids: string[] }>).detail;
       setHighlighted(detail.ids);
@@ -127,12 +180,33 @@ function App() {
     return () => cancelAnimationFrame(id);
   }, [ui.scale, canvas]);
 
+  useEffect(() => {
+    const onCommand = (raw: Event) => {
+      const detail = (raw as CustomEvent<Record<string, string>>).detail;
+      if (detail.action === "select") { setSelected(detail.eventId); setPanel("event"); }
+      else if (detail.action === "filter") { setEventFilter(detail.filter as EventKind | "all"); if (detail.filter === "all") setHighlighted([]); }
+      else if (detail.action === "frame") { if (detail.mode === "reset") canvas.reset(); else canvas.fit(); }
+      else if (detail.action === "replay") void replay();
+    };
+    window.addEventListener("flowtrace:command", onCommand);
+    return () => window.removeEventListener("flowtrace:command", onCommand);
+  });
+
+  const runTool = async (name: string, input: Record<string, unknown> = {}) => {
+    setBusyTool(name);
+    try {
+      return await mcp.call(name, input);
+    } finally {
+      setBusyTool(null);
+    }
+  };
+
   const explainFailure = async () => {
     setAgentState("thinking");
     setHighlighted([]);
     setSurge(false);
     await new Promise((resolve) => setTimeout(resolve, 620));
-    await window.flowTrace?.invoke("explain_failure", { sessionId: "session_8291" });
+    await runTool("explain_failure", { sessionId: "session_8291" });
     setAgentState("done");
     setSurge(true);
     setTimeout(() => setSurge(false), 1600);
@@ -151,7 +225,7 @@ function App() {
   const filterEvents = async (kind: EventKind | "all") => {
     setEventFilter(kind);
     if (kind === "all") setHighlighted([]);
-    else await window.flowTrace?.invoke("filter_events", { type: kind, sessionId: "session_8291" });
+    else await runTool("filter_events", { type: kind, sessionId: "session_8291" });
   };
 
   const select = (id: string) => { setSelected(id); setPanel("event"); };
@@ -196,7 +270,10 @@ function App() {
         <span className="run-chip"><i />Failed</span>
         <span className="run-meta"><span>10:42:17</span><span>1.84s</span><span>6 events</span></span>
         <div className="topbar-actions">
-          <span className={`mcp-chip ${webmcp}`}><CircleDot size={11} />{webmcp === "native" ? "WebMCP live" : webmcp === "preview" ? "WebMCP preview" : "Connecting"}</span>
+          <span className={`mcp-chip ${mcp.connection}`} title={`${mcp.registered.length} tools registered`}>
+            <CircleDot size={11} />
+            {mcp.connection === "native" ? `WebMCP live · ${mcp.registered.length}` : mcp.connection === "preview" ? "WebMCP preview" : "Connecting"}
+          </span>
           <div className="ui-scale">
             <span className="stencil">UI</span>
             <button aria-label="Shrink interface" title="Shrink interface (Alt −)" disabled={!ui.canZoomOut} onClick={ui.zoomOut}>−</button>
@@ -212,7 +289,21 @@ function App() {
         <aside className="rail">
           <div className="rail-section">
             <div className="rail-head"><span className="stencil">Trace sessions</span><button aria-label="Filter sessions"><Filter size={12} /></button></div>
-            <label className="search-box"><Search size={12} /><input aria-label="Search traces" placeholder="Search traces" /><kbd>/</kbd></label>
+            <form
+              className="search-box"
+              toolname="search_traces"
+              tooldescription="Search FlowTrace debugging sessions by name or session ID."
+              onSubmit={(e) => e.preventDefault()}
+            >
+              <Search size={12} />
+              <input
+                name="query"
+                aria-label="Search traces"
+                placeholder="Search traces"
+                toolparamdescription="Text to match against session names and IDs."
+              />
+              <kbd>/</kbd>
+            </form>
             {sessions.map((session) => (
               <button key={session.id} className={`session-row ${session.id === "session_8291" ? "on" : ""}`}>
                 <strong>{session.label}</strong>
@@ -373,10 +464,18 @@ function App() {
           <div className="dock-tabs">
             <button className={panel === "agent" ? "on" : ""} onClick={() => setPanel("agent")}><Sparkles size={12} />Agent</button>
             <button className={panel === "event" ? "on" : ""} onClick={() => setPanel("event")}><Code2 size={12} />Event</button>
+            <button className={panel === "tools" ? "on" : ""} onClick={() => setPanel("tools")}><Braces size={12} />Tools</button>
             <button className="collapse" aria-label="Collapse panel"><PanelRightClose size={14} /></button>
           </div>
 
-          {panel === "agent" ? (
+          {panel === "tools" ? (
+            <ToolRegistry
+              tools={mcp.registered}
+              connection={mcp.connection}
+              busy={busyTool}
+              onRun={(name) => void runTool(name, defaultInputFor(name))}
+            />
+          ) : panel === "agent" ? (
             <div className="agent">
               <div className="agent-id">
                 <span className="agent-glyph"><Sparkles size={14} /></span>
@@ -420,13 +519,18 @@ function App() {
               <div className="composer">
                 <div className="chips">
                   <button onClick={explainFailure}>Explain failure</button>
-                  <button onClick={() => window.flowTrace?.invoke("get_causal_chain", { eventId: selected })}>Trace selected</button>
+                  <button onClick={() => void runTool("get_causal_chain", { eventId: selected })}>Trace selected</button>
+                  <button onClick={() => void runTool("find_errors", { sessionId: "session_8291" })}>Find errors</button>
                 </div>
                 <div className="composer-box">
                   <textarea defaultValue="Why did checkout fail?" aria-label="Ask FlowTrace Agent" />
                   <button aria-label="Send message"><Send size={13} /></button>
                 </div>
-                <small><CircleDot size={9} />Agent can invoke {toolNames.length} read-only WebMCP tools</small>
+                <small>
+                  <CircleDot size={9} />
+                  Agent can invoke {toolNames.length} WebMCP tools
+                  {mcp.lastCall && <> · last: {mcp.lastCall.name} {mcp.lastCall.ms}ms</>}
+                </small>
               </div>
             </div>
           ) : (
@@ -442,7 +546,7 @@ function App() {
                   <div key={key}><span>{key}</span><code>{typeof value === "object" ? JSON.stringify(value) : String(value)}</code></div>
                 ))}
               </div>
-              <button className="solid-button wide-button" onClick={() => window.flowTrace?.invoke("get_causal_chain", { eventId: selectedEvent.id })}>
+              <button className="solid-button wide-button" onClick={() => void runTool("get_causal_chain", { eventId: selectedEvent.id })}>
                 <Crosshair size={13} />Focus causal chain
               </button>
               <div className="json">

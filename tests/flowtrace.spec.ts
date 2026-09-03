@@ -25,14 +25,18 @@ test("agent explanation and graph focus stay synchronized", async ({ page }) => 
   await expect(page.locator(".trace-node.muted")).toHaveCount(1);
 });
 
-test("development API returns the same structured causal graph", async ({ page }) => {
+test("tools answer in the MCP envelope agents expect", async ({ page }) => {
   await page.goto("/");
 
-  const result = await page.evaluate(async () => {
-    return window.flowTrace?.invoke("explain_failure", { sessionId: "session_8291" });
-  });
+  const result = await page.evaluate(async () =>
+    window.flowTrace?.invoke("explain_failure", { sessionId: "session_8291" }));
 
-  expect(result).toMatchObject({
+  // A readable summary for the model...
+  expect(result?.content?.[0]).toMatchObject({ type: "text" });
+  expect(result?.content?.[0].text).toContain("PAYMENT_PROVIDER_TIMEOUT");
+
+  // ...alongside the machine-readable payload.
+  expect(result?.structuredContent).toMatchObject({
     sessionId: "session_8291",
     rootCause: {
       eventId: "req_checkout_42",

@@ -61,7 +61,3 @@ export const kindLabel: Record<EventKind, string> = {
   webmcp: "MCP", network: "NET", state: "STATE", render: "RENDER", console: "ERROR", user: "INTENT"
 };
 
-export const toolNames = [
-  "list_sessions", "inspect_session", "find_errors", "trace_request",
-  "explain_failure", "get_causal_chain", "filter_events", "inspect_webmcp_call"
-] as const;

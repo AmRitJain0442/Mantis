@@ -6,6 +6,15 @@
     <meta name="theme-color" content="#0a0d12" />
     <meta name="description" content="FlowTrace — a shared debugging environment for humans and AI agents." />
     <title>FlowTrace — Agent-native debugging</title>
+    <!--
+      WebMCP is behind an origin trial in Chrome 149. Register the deployed
+      origin at https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241
+      and paste the token below to turn tool registration on in production.
+      Without it the app runs on its own model-context shim and the status
+      chip reads "WebMCP preview".
+    -->
+    <!-- <meta http-equiv="origin-trial" content="REPLACE_WITH_ORIGIN_TRIAL_TOKEN" /> -->
+
     <script>
       // Resolve the theme before first paint so the shell never flashes the wrong one.
       (function () {
