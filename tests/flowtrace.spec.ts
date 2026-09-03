@@ -9,6 +9,10 @@ test("renders the complete checkout failure trace", async ({ page }) => {
   await expect(page.getByText("checkout()", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("POST /api/checkout", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("TypeError", { exact: true }).first()).toBeVisible();
+
+  await expect(page.getByText("100%", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByText("110%", { exact: true })).toBeVisible();
 });
 
 test("agent explanation and graph focus stay synchronized", async ({ page }) => {
