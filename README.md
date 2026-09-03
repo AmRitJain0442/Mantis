@@ -22,6 +22,7 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 - Read-only tool annotations and strict JSON Schemas
 - Browser-safe preview API for environments where experimental WebMCP is unavailable
 - Light and dark themes that follow the OS until you pick one, then remember the choice
+- An interface scale (Alt +, Alt −, Alt 0) that resizes the whole shell independently of the canvas's own zoom, and re-frames the trace when it changes
 - A spatial canvas you can pan, zoom, and rearrange: runtime boundaries are drawn as enclosures, and dragging a node grows its boundary rather than escaping it
 - Boundary ports — every hop that crosses a runtime boundary punches through the enclosure wall at a marked port, carrying the latency of that crossing
 - Responsive, keyboard-focusable developer interface

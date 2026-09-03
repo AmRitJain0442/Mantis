@@ -16,6 +16,10 @@
           : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
+
+        var scale = null;
+        try { scale = localStorage.getItem("flowtrace:scale"); } catch (e) {}
+        if (scale && scale !== "1") document.documentElement.style.zoom = scale;
       })();
     </script>
   </head>

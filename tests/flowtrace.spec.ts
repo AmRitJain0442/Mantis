@@ -74,3 +74,21 @@ test("nodes can be dragged and the canvas can be reframed", async ({ page }) => 
   const restored = (await node.boundingBox())!;
   expect(Math.abs(restored.y - before.y)).toBeLessThan(4);
 });
+
+test("the interface scale resizes the whole shell and persists", async ({ page }) => {
+  await page.goto("/");
+  const level = page.locator(".ui-scale-level");
+  await expect(level).toHaveText("100%");
+
+  await page.getByRole("button", { name: "Enlarge interface" }).click();
+  await expect(level).toHaveText("110%");
+  await expect(page.locator("html")).toHaveAttribute("style", /zoom:\s*1\.1/);
+
+  // Scaling the shell must not leave the page scrolling behind the viewport.
+  const fits = await page.evaluate(() =>
+    document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1);
+  expect(fits).toBe(true);
+
+  await page.reload();
+  await expect(page.locator(".ui-scale-level")).toHaveText("110%");
+});

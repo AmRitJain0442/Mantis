@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   Activity, Bot, Braces, Check, CircleDot, Code2, Crosshair, Filter, Globe2,
   Layers3, Maximize2, MessageSquareText, Moon, Network, PanelRightClose, Play,
@@ -7,6 +7,7 @@ import {
 import { events, kindLabel, sessions, toolNames, type EventKind, type TraceEvent } from "./data";
 import { registerFlowTraceTools } from "./webmcp";
 import { useTheme } from "./theme";
+import { useWorkspaceScale } from "./scale";
 import { useCanvas } from "./canvas";
 import {
   NODE_H, NODE_W, boundaries, boundaryOf, edges, enclosureRect, nodeRect,
@@ -91,6 +92,7 @@ function App() {
 
   const canvas = useCanvas();
   const { theme, toggleTheme } = useTheme();
+  const ui = useWorkspaceScale();
   const selectedEvent = useMemo(() => getEvent(selected), [selected]);
   const focused = highlighted.length > 0;
 
@@ -114,6 +116,16 @@ function App() {
     observer.observe(element);
     return () => observer.disconnect();
   }, [canvas.frameRef]);
+
+  // Changing the interface scale changes how much room the canvas has, so the
+  // trace is re-framed rather than left parked off-centre.
+  const lastScale = useRef(ui.scale);
+  useEffect(() => {
+    if (lastScale.current === ui.scale) return;
+    lastScale.current = ui.scale;
+    const id = requestAnimationFrame(() => canvas.fit());
+    return () => cancelAnimationFrame(id);
+  }, [ui.scale, canvas]);
 
   const explainFailure = async () => {
     setAgentState("thinking");
@@ -185,6 +197,12 @@ function App() {
         <span className="run-meta"><span>10:42:17</span><span>1.84s</span><span>6 events</span></span>
         <div className="topbar-actions">
           <span className={`mcp-chip ${webmcp}`}><CircleDot size={11} />{webmcp === "native" ? "WebMCP live" : webmcp === "preview" ? "WebMCP preview" : "Connecting"}</span>
+          <div className="ui-scale">
+            <span className="stencil">UI</span>
+            <button aria-label="Shrink interface" title="Shrink interface (Alt −)" disabled={!ui.canZoomOut} onClick={ui.zoomOut}>−</button>
+            <button className="ui-scale-level" onDoubleClick={ui.resetScale} title="Double-click to reset (Alt 0)">{Math.round(ui.scale * 100)}%</button>
+            <button aria-label="Enlarge interface" title="Enlarge interface (Alt +)" disabled={!ui.canZoomIn} onClick={ui.zoomIn}>+</button>
+          </div>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <span className="avatar">AK</span>
         </div>

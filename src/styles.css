@@ -178,6 +178,14 @@ button { cursor: pointer; }
 .mcp-chip { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 13px; color: var(--ink-3); font: 600 9px var(--cond); letter-spacing: .1em; text-transform: uppercase; }
 .mcp-chip.native { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
 .mcp-chip.checking { color: var(--warn); }
+.ui-scale { display: flex; align-items: center; gap: 1px; height: 28px; padding: 0 8px 0 9px; border: 1px solid var(--rule); border-radius: var(--r); }
+.ui-scale .stencil { margin-right: 6px; }
+.ui-scale button { display: grid; place-items: center; height: 22px; min-width: 20px; padding: 0 3px; border: 0; border-radius: 2px; background: transparent; color: var(--ink-3); font: 500 11px var(--mono); transition: background .14s var(--ease), color .14s var(--ease); }
+.ui-scale button:hover:not(:disabled) { background: var(--sunken); color: var(--ink); }
+.ui-scale button:disabled { opacity: .35; cursor: not-allowed; }
+.ui-scale .ui-scale-level { min-width: 38px; color: var(--ink-2); cursor: default; }
+.ui-scale .ui-scale-level:hover { background: transparent; }
+
 .ghost-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--rule); border-radius: var(--r); background: transparent; color: var(--ink-3); transition: color .16s var(--ease), border-color .16s var(--ease); }
 .ghost-button:hover { color: var(--ink); border-color: var(--ink-4); }
 .avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); font: 500 9px var(--mono); }
@@ -402,6 +410,11 @@ button { cursor: pointer; }
 .surge { fill: none; stroke: var(--fault); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: var(--len); animation: surge .7s var(--ease) backwards; animation-delay: calc(var(--step) * 130ms); }
 
 /* ----------------------------------------------------------- responsive - */
+@media (max-width: 1160px) {
+  .ui-scale .stencil { display: none; }
+  .ui-scale { padding-inline: 4px; }
+}
+
 @media (max-width: 1300px) {
   .workspace { grid-template-columns: 218px minmax(0, 1fr) 340px; }
   .run-meta { display: none; }

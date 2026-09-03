@@ -12,6 +12,11 @@ const INSET = { top: 78, bottom: 62, side: 28 };
 const CLICK_SLOP = 4;
 
 const clampZoom = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
+
+/** Root `zoom` scales pointer coordinates and client rects but not the canvas
+ *  transform, so every measurement taken from the viewport is divided by it to
+ *  land back in the world's own pixels. */
+const docZoom = () => Number(document.documentElement.style.zoom) || 1;
 const round = (k: number) => Math.round(k * 100) / 100;
 
 /** Pan, zoom, and node dragging for the trace canvas. Positions live in world
@@ -25,7 +30,9 @@ export function useCanvas() {
 
   const frameSize = (): Rect | null => {
     const box = frameRef.current?.getBoundingClientRect();
-    return box ? { x: box.left, y: box.top, w: box.width, h: box.height } : null;
+    if (!box) return null;
+    const z = docZoom();
+    return { x: box.left / z, y: box.top / z, w: box.width / z, h: box.height / z };
   };
 
   /** Zoom about a fixed point so the canvas grows under the cursor, not the corner. */
@@ -95,7 +102,8 @@ export function useCanvas() {
       setViewport((current) => {
         const k = clampZoom(current.k * (1 - event.deltaY * 0.0022));
         if (k === current.k) return current;
-        const at = { x: event.clientX - frame.left, y: event.clientY - frame.top };
+        const z = docZoom();
+        const at = { x: event.clientX / z - frame.left / z, y: event.clientY / z - frame.top / z };
         return {
           k: round(k),
           x: at.x - (at.x - current.x) * (k / current.k),
@@ -112,8 +120,14 @@ export function useCanvas() {
     const origin = { x: event.clientX, y: event.clientY };
     const start = { ...viewport };
     setPanning(true);
-    const move = (e: PointerEvent) =>
-      setViewport({ ...start, x: start.x + (e.clientX - origin.x), y: start.y + (e.clientY - origin.y) });
+    const move = (e: PointerEvent) => {
+      const z = docZoom();
+      setViewport({
+        ...start,
+        x: start.x + (e.clientX - origin.x) / z,
+        y: start.y + (e.clientY - origin.y) / z
+      });
+    };
     const end = () => {
       setPanning(false);
       window.removeEventListener("pointermove", move);
@@ -138,9 +152,10 @@ export function useCanvas() {
       const dy = e.clientY - origin.y;
       if (!moved && Math.hypot(dx, dy) < CLICK_SLOP) return;
       if (!moved) { moved = true; setDragging(id); }
+      const world = scale * docZoom();
       setPositions((current) => ({
         ...current,
-        [id]: { x: Math.round(start.x + dx / scale), y: Math.round(start.y + dy / scale) }
+        [id]: { x: Math.round(start.x + dx / world), y: Math.round(start.y + dy / world) }
       }));
     };
     const end = () => {
