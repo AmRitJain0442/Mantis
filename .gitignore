@@ -11,3 +11,6 @@ playwright-report/
 test-results/
 .DS_Store
 Thumbs.db
+
+# local screenshot helper
+.shot.mjs
