@@ -412,7 +412,12 @@ export const modelContext = (): ModelContextLike => {
   if (native?.getTools && native.executeTool) {
     return {
       getTools: () => native.getTools!(),
-      executeTool: (tool, input, options) => native.executeTool!(tool, input, options)
+      // Verified against Chrome 152's origin-trial build: executeTool expects
+      // the tool's arguments serialized as a JSON string, not a plain object
+      // — passing an object throws "Failed to parse input arguments". Our own
+      // shim takes a plain object, so this conversion belongs here, at the
+      // single seam between the two, rather than leaking into every caller.
+      executeTool: (tool, input, options) => native.executeTool!(tool, JSON.stringify(input ?? {}), options)
     };
   }
   return shim;

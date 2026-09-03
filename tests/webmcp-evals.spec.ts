@@ -131,3 +131,76 @@ test.describe("WebMCP tool evals", () => {
     await expect(page.locator(".hint.write").first()).toBeVisible();
   });
 });
+
+/* ============================================================================
+   Native document.modelContext contract.
+
+   window.mantis.invoke() always talks to the local shim directly, so it never
+   exercises modelContext() — the adapter the app's own UI actually calls
+   through (Explain, source filters, every Tools-panel Run button). That gap
+   let a real bug ship: Chrome 152's origin-trial build rejects executeTool's
+   input unless it is a JSON string, throwing "Failed to parse input
+   arguments" for a plain object. Our shim never complained, because it
+   doesn't validate the type.
+
+   This fakes a native document.modelContext with that exact contract — no
+   origin trial required — and drives the bug through the real UI, so a
+   regression here fails a test instead of shipping silently again.
+   ========================================================================= */
+test.describe("native document.modelContext contract", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const registry = new Map<string, { execute: (input: unknown, options?: unknown) => unknown }>();
+      (window as unknown as { __nativeCallTypes: string[] }).__nativeCallTypes = [];
+      (document as unknown as { modelContext: unknown }).modelContext = {
+        async registerTool(descriptor: { name: string; execute: (input: unknown, options?: unknown) => unknown }) {
+          registry.set(descriptor.name, descriptor);
+        },
+        async getTools() {
+          return [...registry.keys()].map((name) => ({ name, description: name, annotations: { readOnlyHint: true } }));
+        },
+        // Mirrors Chrome 152's origin-trial behaviour: throws unless `input`
+        // is a JSON string, then parses it before handing it to the tool.
+        async executeTool(tool: { name: string }, input: unknown) {
+          (window as unknown as { __nativeCallTypes: string[] }).__nativeCallTypes.push(typeof input);
+          if (typeof input !== "string") {
+            throw new DOMException("Failed to parse input arguments", "UnknownError");
+          }
+          return registry.get(tool.name)!.execute(JSON.parse(input));
+        },
+        addEventListener() {},
+        removeEventListener() {}
+      };
+    });
+  });
+
+  test("the app registers against the fake native context, not the shim", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".mcp-chip")).toContainText("WebMCP live", { timeout: 5000 });
+  });
+
+  test("Explain completes through the native executeTool path", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Run investigation/i }).click();
+
+    await expect(page.locator(".verdict strong")).toHaveText("Missing failure guard after token exchange", { timeout: 5000 });
+
+    const calls = await page.evaluate(() => (window as unknown as { __nativeCallTypes: string[] }).__nativeCallTypes);
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every((t) => t === "string")).toBe(true);
+  });
+
+  test("every UI action that calls a tool serializes its arguments", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(600);
+
+    await page.locator('.source-row:has-text("Network")').click();
+    await page.locator('.dock-tabs button:has-text("Tools")').click();
+    await page.locator(".tool-card").first().locator("button", { hasText: "Run" }).click();
+    await page.waitForTimeout(400);
+
+    const calls = await page.evaluate(() => (window as unknown as { __nativeCallTypes: string[] }).__nativeCallTypes);
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every((t) => t === "string")).toBe(true);
+  });
+});
