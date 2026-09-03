@@ -29,6 +29,8 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 
 ## WebMCP tools
 
+### Read-only (`readOnlyHint: true`)
+
 | Tool | Purpose |
 | --- | --- |
 | `list_sessions` | Find available trace sessions |
@@ -40,7 +42,54 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 | `filter_events` | Filter by network, console, WebMCP, state, render, or user events |
 | `inspect_webmcp_call` | Inspect an agent tool call and everything it triggered |
 
-The core integration lives in [`src/webmcp.ts`](src/webmcp.ts). Tool execution emits a shared focus event:
+### Writes UI state (`readOnlyHint: false`)
+
+| Tool | Purpose |
+| --- | --- |
+| `select_event` | Open an event in the inspector so human and agent look at the same thing |
+| `set_source_filter` | Set or clear the capture-source filter |
+| `frame_trace` | Fit the causal graph to view, or restore the authored layout |
+| `replay_session` | Step the canvas through a session so the failure unfolds |
+
+Every tool whose result is built from captured console or network payloads also
+carries `untrustedContentHint` — that data is authored by the page under test,
+not by FlowTrace, and downstream consumers should treat it accordingly.
+
+A declarative tool is registered too: the trace search box carries `toolname`,
+`tooldescription` and `toolparamdescription`, so the browser can drive the form
+directly.
+
+
+## How the integration works
+
+The core lives in [`src/webmcp.ts`](src/webmcp.ts). Results come back in the MCP
+envelope — a `content` array the model reads, plus `structuredContent` carrying
+the payload:
+
+```ts
+return {
+  content: [{ type: "text", text: "Root cause: POST /api/checkout returned HTTP 500…" }],
+  structuredContent: { rootCause: { eventId: "req_checkout_42", code: "PAYMENT_PROVIDER_TIMEOUT" } }
+};
+```
+
+Tools are registered with an `AbortController` so they unregister cleanly, and
+`execute` receives a signal so long calls can be cancelled:
+
+```ts
+await document.modelContext.registerTool(tool, { signal: controller.signal });
+```
+
+The application is a client of its own tools. Nothing in the UI reaches into the
+module directly — every action goes through discovery and execution, the same
+path an agent takes:
+
+```ts
+const tool = (await modelContext().getTools()).find((t) => t.name === "explain_failure");
+await modelContext().executeTool(tool, { sessionId: "session_8291" });
+```
+
+Tool execution emits a shared focus event:
 
 ```ts
 window.dispatchEvent(new CustomEvent("flowtrace:focus", {
@@ -49,6 +98,35 @@ window.dispatchEvent(new CustomEvent("flowtrace:focus", {
     source: "explain_failure"
   }
 }));
+```
+
+### Enabling WebMCP in the browser
+
+WebMCP is behind an origin trial in Chrome 149. Register the deployed origin at
+the [WebMCP origin trial](https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241)
+and paste the token into the commented `<meta http-equiv="origin-trial">` tag in
+[`index.html`](index.html). The status chip then reads **WebMCP live** with the
+registered tool count.
+
+Without a token, FlowTrace serves the identical surface — `getTools`,
+`executeTool`, annotations and all — through its own model-context shim, and the
+chip reads **WebMCP preview**. The application behaves the same either way; only
+the registration target changes.
+
+The **Tools** tab in the right dock lists what is actually registered, reading
+live from `getTools()` and refreshing on `toolchange`. Each tool shows its
+annotations and can be run from the panel.
+
+## Evals
+
+`tests/webmcp-evals.spec.ts` follows Chrome's
+[eval guidance](https://developer.chrome.com/docs/ai/webmcp/evals): every tool is
+exercised through the model-context surface, and the suite checks descriptors are
+usable, annotations are honest, the description and output budgets hold, and bad
+input returns a tool error rather than crashing.
+
+```bash
+npm test
 ```
 
 ## Run locally
