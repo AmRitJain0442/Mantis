@@ -40,3 +40,15 @@ test("development API returns the same structured causal graph", async ({ page }
     triggeredBy: { tool: "webmcp.checkout" }
   });
 });
+
+test("the theme switch flips the workspace and survives a reload", async ({ page }) => {
+  await page.goto("/");
+  const root = page.locator("html");
+  const startedDark = (await root.getAttribute("data-theme")) === "dark";
+
+  await page.getByRole("button", { name: /Switch to (light|dark) theme/ }).click();
+  await expect(root).toHaveAttribute("data-theme", startedDark ? "light" : "dark");
+
+  await page.reload();
+  await expect(root).toHaveAttribute("data-theme", startedDark ? "light" : "dark");
+});

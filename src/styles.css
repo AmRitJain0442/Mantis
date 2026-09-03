@@ -330,7 +330,7 @@ button { cursor: pointer; }
 /* --------------------------------------------------------------- graph -- */
 .graph-wrap {
   min-height: 0; position: relative; overflow: auto;
-  display: grid; place-items: center;
+  display: grid; place-items: center; padding: 0 14px 14px;
   scrollbar-width: thin; scrollbar-color: var(--wire) transparent;
   background-image: radial-gradient(var(--grid) 1px, transparent 1px);
   background-size: 22px 22px;
@@ -509,21 +509,26 @@ button { cursor: pointer; }
   .session-meta > span:not(.failed) { display: none; }
 }
 
+/* Below this width the three panes stack; the agent panel becomes the last
+   section of the page rather than a sheet that buries the graph. */
 @media (max-width: 860px) {
   body { overflow: auto; }
-  .app-shell { min-height: 720px; grid-template-rows: 54px 40px minmax(0, 1fr) 24px; }
-  .topbar { grid-template-columns: 1fr auto; }
+  .app-shell { height: auto; min-height: 100%; grid-template-rows: 54px 40px auto 26px; }
+  .topbar { position: sticky; top: 0; grid-template-columns: 1fr auto; }
   .project-switcher, .mcp-status, .icon-button { display: none; }
-  .brand { border-right: 0; }
+  .brand { border-right: 0; padding-left: 14px; }
   .workspace { grid-template-columns: 1fr; }
-  .right-panel { position: absolute; z-index: 5; right: 0; top: 94px; bottom: 24px; width: min(92vw, 380px); box-shadow: var(--shadow-lg); }
+  .canvas-panel { grid-template-rows: auto auto auto 360px; }
   .canvas-header { padding: 14px 14px 12px; }
   .insight-strip { padding-inline: 14px; }
   .insight-strip > span { display: none; }
   .signal-spine { padding-inline: 14px; }
   .spine-track { left: 20px; right: 20px; }
-  .graph-wrap { overflow: auto; }
+  .graph-wrap { justify-items: start; padding: 30px 0 14px; }
   .trace-svg { min-width: 900px; }
+  .right-panel { height: 600px; border-left: 0; border-top: 1px solid var(--line); }
+  .statusbar { gap: 12px; overflow-x: auto; white-space: nowrap; }
+  .statusbar span:nth-of-type(3), .statusbar span:nth-of-type(4) { display: none; }
 }
 
 @media (max-height: 660px) {
