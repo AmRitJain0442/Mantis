@@ -53,3 +53,24 @@ test("the theme switch flips the workspace and survives a reload", async ({ page
   await page.reload();
   await expect(root).toHaveAttribute("data-theme", startedDark ? "light" : "dark");
 });
+
+test("nodes can be dragged and the canvas can be reframed", async ({ page }) => {
+  await page.goto("/");
+  const node = page.locator(".trace-node").first();
+  // Nodes animate in; measure once they have settled.
+  await page.waitForTimeout(700);
+  const before = (await node.boundingBox())!;
+
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(before.x + before.width / 2 - 60, before.y + before.height / 2 + 150, { steps: 10 });
+  await page.mouse.up();
+
+  const after = (await node.boundingBox())!;
+  expect(Math.abs(after.y - before.y)).toBeGreaterThan(80);
+
+  // Reset restores the authored layout.
+  await page.getByRole("button", { name: "Reset layout" }).click();
+  const restored = (await node.boundingBox())!;
+  expect(Math.abs(restored.y - before.y)).toBeLessThan(4);
+});

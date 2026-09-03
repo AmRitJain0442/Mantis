@@ -302,6 +302,8 @@ function App() {
                     className={`trace-node ${active ? "active" : ""} ${focused && !highlighted.includes(event.id) ? "muted" : ""} ${canvas.dragging === event.id ? "held" : ""}`}
                     style={{ ...tone(boundary), left: point.x, top: point.y, width: NODE_W, height: NODE_H, "--i": index } as CSSProperties}
                     onPointerDown={(e) => canvas.startNodeDrag(e, event.id, () => select(event.id))}
+                    // Pointer selection runs through the drag handler; detail 0 is a keyboard press.
+                    onClick={(e) => { if (e.detail === 0) select(event.id); }}
                   >
                     <span className="node-top">
                       <span className="node-kind"><Icon size={11} strokeWidth={2.2} />{kindLabel[event.kind]}</span>
