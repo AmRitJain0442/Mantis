@@ -42,7 +42,11 @@ const defaultInputFor = (name: string): Record<string, unknown> => {
 const svgRect = (rect: Rect) => ({ x: rect.x, y: rect.y, width: rect.w, height: rect.h });
 
 function BrandMark() {
-  return <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>;
+  return (
+    <span className="brand-mark" aria-hidden="true">
+      <img src="/brand/mantis-mark.png" alt="" />
+    </span>
+  );
 }
 
 function ThemeToggle({ theme, onToggle }: { theme: "light" | "dark"; onToggle: () => void }) {

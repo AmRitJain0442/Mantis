@@ -1,6 +1,9 @@
 <div align="center">
 
-# Mantis
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/brand/mantis-wordmark-dark.png">
+  <img src="public/brand/mantis-wordmark.png" alt="Mantis" width="520">
+</picture>
 
 ### A shared debugging environment for humans and agents
 
