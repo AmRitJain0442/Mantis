@@ -1,35 +1,51 @@
+<div align="center">
+
 # Mantis
 
 ### A shared debugging environment for humans and agents
 
-Mantis turns disconnected browser telemetry into one causal graph. Developers get a visual timeline; AI agents get structured, read-only WebMCP tools over the exact same trace.
+**[▶ Live demo](https://flowtrace-mu.vercel.app)** · [WebMCP tools](#the-webmcp-surface) · [How the integration works](#how-the-integration-works) · [Evals](#evals)
 
-![The Mantis canvas](preview-dark.png)
+[![WebMCP](https://img.shields.io/badge/WebMCP-12_tools-0a8d7d)](#the-webmcp-surface)
+[![Tests](https://img.shields.io/badge/tests-24_passing-3a54c9)](#evals)
+[![License](https://img.shields.io/badge/license-MIT-666)](LICENSE)
 
-When an agent calls `explain_failure`, Mantis returns machine-readable causes and simultaneously focuses those events in the UI:
+</div>
+
+---
+
+When an agent breaks your app, it can see its own tool call and nothing else. The
+network request it triggered, the state that went undefined, the component that
+crashed — all invisible. You get a screenshot and a shrug.
+
+Mantis turns disconnected browser telemetry into one causal graph. Developers get
+a spatial canvas; agents get the exact same trace through WebMCP.
 
 ```text
 WebMCP checkout() → POST /api/checkout → HTTP 500
                   → paymentToken undefined → CheckoutForm crash
 ```
 
-## What is working
+![The Mantis canvas, with the agent's causal chain lit](preview-dark.png)
 
-- Interactive causal graph spanning agent intent, WebMCP, network, state, render, and console events
-- Synchronized agent/UI focus through stable event IDs and `mantis:focus` browser events
-- Eight real WebMCP tools registered with `document.modelContext.registerTool`
-- Built-in checkout-failure demo with replay, source filters, event inspection, and agent explanation
-- Read-only tool annotations and strict JSON Schemas
-- Browser-safe preview API for environments where experimental WebMCP is unavailable
-- Light and dark themes that follow the OS until you pick one, then remember the choice
-- An interface scale (Alt +, Alt −, Alt 0) that resizes the whole shell independently of the canvas's own zoom, and re-frames the trace when it changes
-- A spatial canvas you can pan, zoom, and rearrange: runtime boundaries are drawn as enclosures, and dragging a node grows its boundary rather than escaping it
-- Boundary ports — every hop that crosses a runtime boundary punches through the enclosure wall at a marked port, carrying the latency of that crossing
-- Responsive, keyboard-focusable developer interface
+## The idea
 
-## WebMCP tools
+Mantis's claim is that it correlates causality **across runtime boundaries**, so
+the canvas draws those boundaries as physical enclosures. Every hop that crosses
+one punches through the enclosure wall at a marked **port**, carrying the latency
+of that crossing. Boundary-crossing stops being a label and becomes something you
+can see.
 
-### Read-only (`readOnlyHint: true`)
+Colour follows the boundary, not the event type: a temperature ramp from agent
+intent (cool) to user impact (hot), so a failure literally arrives at the warm
+end of the canvas.
+
+## The WebMCP surface
+
+Twelve tools registered through `document.modelContext`, split by what they are
+allowed to do.
+
+### Read-only — `readOnlyHint: true`
 
 | Tool | Purpose |
 | --- | --- |
@@ -42,7 +58,7 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 | `filter_events` | Filter by network, console, WebMCP, state, render, or user events |
 | `inspect_webmcp_call` | Inspect an agent tool call and everything it triggered |
 
-### Writes UI state (`readOnlyHint: false`)
+### Writes UI state — `readOnlyHint: false`
 
 | Tool | Purpose |
 | --- | --- |
@@ -51,14 +67,21 @@ WebMCP checkout() → POST /api/checkout → HTTP 500
 | `frame_trace` | Fit the causal graph to view, or restore the authored layout |
 | `replay_session` | Step the canvas through a session so the failure unfolds |
 
-Every tool whose result is built from captured console or network payloads also
-carries `untrustedContentHint` — that data is authored by the page under test,
-not by Mantis, and downstream consumers should treat it accordingly.
+An agent can drive the workspace, not just read it.
 
-A declarative tool is registered too: the trace search box carries `toolname`,
+Every tool whose result is built from captured console or network payloads also
+carries `untrustedContentHint`. That data is authored by the page under test, not
+by Mantis, and downstream consumers should treat it accordingly.
+
+A **declarative** tool is registered too: the trace search box carries `toolname`,
 `tooldescription` and `toolparamdescription`, so the browser can drive the form
 directly.
 
+![The live tool registry](preview-tools.png)
+
+The **Tools** tab reads live from `getTools()` and refreshes on `toolchange`, so
+it shows what the browser actually has registered rather than what this repo
+intends. Each tool displays its annotations and can be run from the panel.
 
 ## How the integration works
 
@@ -73,15 +96,15 @@ return {
 };
 ```
 
-Tools are registered with an `AbortController` so they unregister cleanly, and
-`execute` receives a signal so long calls can be cancelled:
+Tools register with an `AbortController` so they unregister cleanly, and `execute`
+receives a signal so long calls can be cancelled:
 
 ```ts
 await document.modelContext.registerTool(tool, { signal: controller.signal });
 ```
 
-The application is a client of its own tools. Nothing in the UI reaches into the
-module directly — every action goes through discovery and execution, the same
+**The application is a client of its own tools.** Nothing in the UI reaches into
+the module directly — every action goes through discovery and execution, the same
 path an agent takes:
 
 ```ts
@@ -89,45 +112,58 @@ const tool = (await modelContext().getTools()).find((t) => t.name === "explain_f
 await modelContext().executeTool(tool, { sessionId: "session_8291" });
 ```
 
-Tool execution emits a shared focus event:
+Execution emits a shared focus event, which is what keeps the two views in step:
 
 ```ts
 window.dispatchEvent(new CustomEvent("mantis:focus", {
-  detail: {
-    ids: ["req_checkout_42", "state_payment_07", "error_type_01"],
-    source: "explain_failure"
-  }
+  detail: { ids: ["req_checkout_42", "state_payment_07", "error_type_01"], source: "explain_failure" }
 }));
 ```
 
+Write tools emit `mantis:command`, which the canvas applies — that is how an
+agent moves your view.
+
 ### Enabling WebMCP in the browser
 
-WebMCP is behind an origin trial in Chrome 149. Register the deployed origin at
-the [WebMCP origin trial](https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241)
+WebMCP is behind an origin trial in Chrome 149. Register your origin at the
+[WebMCP origin trial](https://developer.chrome.com/origintrials/#/register_trial/4163014905550602241)
 and paste the token into the commented `<meta http-equiv="origin-trial">` tag in
 [`index.html`](index.html). The status chip then reads **WebMCP live** with the
 registered tool count.
 
-Without a token, Mantis serves the identical surface — `getTools`,
-`executeTool`, annotations and all — through its own model-context shim, and the
-chip reads **WebMCP preview**. The application behaves the same either way; only
-the registration target changes.
-
-The **Tools** tab in the right dock lists what is actually registered, reading
-live from `getTools()` and refreshing on `toolchange`. Each tool shows its
-annotations and can be run from the panel.
+Without a token, Mantis serves the identical surface — `getTools`, `executeTool`,
+annotations and all — through its own model-context shim, and the chip reads
+**WebMCP preview**. The application behaves the same either way; only the
+registration target changes.
 
 ## Evals
 
-`tests/webmcp-evals.spec.ts` follows Chrome's
-[eval guidance](https://developer.chrome.com/docs/ai/webmcp/evals): every tool is
-exercised through the model-context surface, and the suite checks descriptors are
-usable, annotations are honest, the description and output budgets hold, and bad
-input returns a tool error rather than crashing.
+[`tests/webmcp-evals.spec.ts`](tests/webmcp-evals.spec.ts) follows Chrome's
+[eval guidance](https://developer.chrome.com/docs/ai/webmcp/evals). An agent only
+ever sees the descriptor and the result, so both are checked through the
+model-context surface rather than by importing the module:
+
+- every tool is discoverable with a usable descriptor and schema
+- read and write tools are labelled honestly, and untrusted payloads are marked
+- the 500 / 150 / 1.5K description, parameter and output budgets hold
+- bad input returns a tool error rather than crashing
+- write tools actually move the interface
 
 ```bash
-npm test
+npm test      # 24 tests
 ```
+
+## The rest of the interface
+
+- **Spatial canvas** — pan, zoom, and drag nodes. Enclosures are derived from the
+  nodes they hold, so dragging a node grows its boundary instead of escaping it,
+  which keeps the wall crossings the ports are drawn from honest.
+- **Light and dark themes** that follow the OS until you pick one, then remember.
+- **Interface scale** (`Alt +` / `Alt −` / `Alt 0`) resizing the whole shell,
+  separate from the canvas zoom, re-framing the trace when it changes.
+- Responsive down to mobile, visible keyboard focus, reduced motion respected.
+
+![Mantis in the light theme](preview-light.png)
 
 ## Run locally
 
@@ -137,8 +173,6 @@ Requires Node.js 20 or newer.
 npm install
 npm run dev
 ```
-
-Then open `http://localhost:5173`.
 
 For a production check:
 
@@ -150,20 +184,19 @@ npm run preview
 ## Try the demo
 
 1. Open the failed `Checkout · agent run` session.
-2. Select events in the graph to inspect their structured metadata.
-3. Choose **Ask agent to explain** or **Run investigation**.
-4. Mantis invokes `explain_failure({ sessionId: "session_8291" })`.
-5. Watch the agent response and causal graph focus on the same events.
+2. Press **Explain** — the causal chain lights up across four runtime boundaries.
+   The long vertical run is the 1.19s the payment provider spent stalling.
+3. Open the **Tools** tab and run a tool. Watch a write tool move the canvas.
+4. Drag a node and see its enclosure grow to follow it.
 
-In a browser without WebMCP support, the same tools are available from DevTools for development:
+In any browser, the same tools are reachable from DevTools:
 
 ```js
-await window.mantis.invoke("explain_failure", {
-  sessionId: "session_8291"
-});
+await window.mantis.invoke("explain_failure", { sessionId: "session_8291" });
 ```
 
-For native testing, use ChatGPT's in-app browser or enable WebMCP testing in Chrome at `chrome://flags/#enable-webmcp-testing`, then ask the browser agent to list and inspect Mantis sessions.
+For the native path, use ChatGPT's in-app browser or Chrome 149 with WebMCP
+enabled, then ask the browser agent to list and inspect Mantis sessions.
 
 ## Architecture
 
@@ -171,19 +204,30 @@ For native testing, use ChatGPT's in-app browser or enable WebMCP testing in Chr
 Application telemetry
         ↓
 Normalized TraceEvent graph
-        ├──→ React visual debugger (human view)
+        ├──→ React canvas (human view)
         └──→ document.modelContext tools (agent view)
                        ↓
-                mantis:focus
+              mantis:focus / mantis:command
                        ↓
-             synchronized selection
+              synchronized selection
 ```
 
-The current hackathon slice uses a deterministic ecommerce trace so judges can reproduce the complete story. The data boundary is isolated in [`src/data.ts`](src/data.ts), ready to be replaced by a browser SDK or streamed capture source.
+| File | Role |
+| --- | --- |
+| [`src/webmcp.ts`](src/webmcp.ts) | Tool definitions, registration, the MCP envelope, the shim |
+| [`src/useWebMCP.ts`](src/useWebMCP.ts) | React binding: registration lifecycle, discovery, `toolchange` |
+| [`src/canvas.ts`](src/canvas.ts) | Pan, zoom-about-cursor, node dragging, fit-to-view |
+| [`src/layout.ts`](src/layout.ts) | Derived enclosures, right-angle routing, boundary ports |
+| [`src/data.ts`](src/data.ts) | The trace itself — the seam a real capture SDK would replace |
+
+The hackathon slice uses a deterministic ecommerce trace so the whole story is
+reproducible. The data boundary is isolated in `src/data.ts`, ready to be
+replaced by a browser SDK or a streamed capture source.
 
 ## Stack
 
-React 19, TypeScript, Vite, Lucide icons, and the browser-native [WebMCP API](https://webmachinelearning.github.io/webmcp/).
+React 19, TypeScript, Vite, Lucide icons, Playwright, and the browser-native
+[WebMCP API](https://webmachinelearning.github.io/webmcp/).
 
 ## License
 
